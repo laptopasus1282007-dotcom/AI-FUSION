@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Debugging Assistant — CodeSathi AI{% endblock %}
+{% block page_title %}Debugging Assistant{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(6,182,212,0.2);color:#22d3ee;">
+    <i class="bi bi-bug-fill"></i>
+  </div>
+  <div>
+    <h1>Debugging Assistant</h1>
+    <p class="text-muted fs-13 mb-0">Submit your code and error message to get a root-cause analysis and fix.</p>
+  </div>
+</div>
+
+{% if not llm_available %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  LLM API key not configured. <a href="{% url 'core:settings' %}">Add your API key</a> to enable debugging.
+</div>
+{% endif %}
+
+<!-- Judge Demo Presets Bar -->
+<div class="demo-preset-bar">
+  <span class="fs-12 text-warning fw-bold"><i class="bi bi-award-fill me-1"></i>Judge / Demo Bugs:</span>
+  <span class="demo-preset-chip" onclick="loadDebugDemo('index')"><i class="bi bi-bug-fill"></i> 1. IndexError (Off-by-one)</span>
+  <span class="demo-preset-chip" onclick="loadDebugDemo('type')"><i class="bi bi-bug-fill"></i> 2. TypeError (int + str)</span>
+  <span class="demo-preset-chip" onclick="loadDebugDemo('zero')"><i class="bi bi-bug-fill"></i> 3. ZeroDivisionError</span>
+  <span class="demo-preset-chip" onclick="loadDebugDemo('recursion')"><i class="bi bi-bug-fill"></i> 4. RecursionError</span>
+</div>
+
+<form method="POST" action="{% url 'core:debug_result' %}" data-loading="Analysing your code…" id="debugForm">
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-code-square me-2 text-cyan" style="color:#22d3ee;"></i>Your Code</span>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="fs-12 text-muted d-none d-sm-inline">Language:</span>
+            <select class="form-select form-select-sm" name="language" id="debugLangSelect" style="width:130px;">
+              {% for lang in supported_languages %}
+              <option>{{ lang }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <textarea class="form-control border-0 rounded-0" name="code" id="debugCodeInput"
+            placeholder="Paste your buggy code here, or click one of the Judge Demo presets above…" rows="14"
+            style="border-radius:0!important;" required></textarea>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-terminal me-2 text-danger"></i>Error Message / Traceback</span>
+          <span class="fs-12 text-muted">Auto-detected or paste console output</span>
+        </div>
+        <div class="card-body p-0">
+          <textarea class="form-control border-0 rounded-0" name="error_message" id="debugErrorInput"
+            placeholder="Paste the error message or traceback here (e.g. IndexError: list index out of range)…" rows="5"
+            style="border-radius:0 0 12px 12px!important;min-height:auto;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-translate me-2"></i>Explanation Language</div>
+        <div class="card-body">
+          {% for lang in explanation_languages %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="explanation_language"
+              id="dblang{{ lang }}" value="{{ lang }}" {% if lang == "English" %}checked{% endif %}>
+            <label class="form-check-label text-white fw-500" for="dblang{{ lang }}">{{ lang }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-info-circle me-2"></i>What You'll Get</div>
+        <div class="card-body fs-13">
+          <ul class="list-unstyled mb-0" style="color:var(--text-secondary);">
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Root cause identified</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Why the error occurs (mechanical reason)</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Expected vs actual behavior</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Step-by-step fix guide</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Clean corrected code</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Verifiable Evidence attribution badge</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mb-3" style="border-color:rgba(239,68,68,0.3);">
+        <div class="card-body fs-13" style="color:var(--text-secondary);">
+          <i class="bi bi-shield-check me-2 text-success"></i>
+          <strong class="text-white">Evidence-Grounded:</strong> CodeSathi AI diagnoses errors strictly against code lines and syntax rules, avoiding phantom runtime claims.
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 btn-lg"
+        data-loading-text="Debugging…"
+        {% if not llm_available %}disabled{% endif %}>
+        <i class="bi bi-bug"></i> Debug This Code
+      </button>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const debugDemos = {
+  index: {
+    lang: 'Python',
+    code: `names = ["Alice", "Bob", "Charlie"]\n# Attempting to print each name using length\nfor i in range(1, 4):\n    print("Hello", names[i])`,
+    error: `Traceback (most recent call last):\n  File "main.py", line 4, in <module>\n    print("Hello", names[i])\nIndexError: list index out of range`
+  },
+  type: {
+    lang: 'Python',
+    code: `age = 22\nmessage = "User is " + age + " years old."\nprint(message)`,
+    error: `Traceback (most recent call last):\n  File "app.py", line 2, in <module>\n    message = "User is " + age + " years old."\nTypeError: can only concatenate str (not "int") to str`
+  },
+  zero: {
+    lang: 'Python',
+    code: `numbers = [10, 20, 0, 40, 50]\ntotal = 100\nfor n in numbers:\n    ratio = total / n\n    print("Ratio:", ratio)`,
+    error: `Traceback (most recent call last):\n  File "calc.py", line 4, in <module>\n    ratio = total / n\nZeroDivisionError: division by zero`
+  },
+  recursion: {
+    lang: 'Python',
+    code: `def count_down(n):\n    print(n)\n    # Missing base condition to stop!\n    return count_down(n - 1)\n\ncount_down(5)`,
+    error: `Traceback (most recent call last):\n  File "recursion.py", line 5, in <module>\n    return count_down(n - 1)\n  [Previous line repeated 996 more times]\nRecursionError: maximum recursion depth exceeded while calling a Python object`
+  }
+};
+
+function loadDebugDemo(key) {
+  const d = debugDemos[key];
+  if (!d) return;
+  document.getElementById('debugCodeInput').value = d.code;
+  document.getElementById('debugErrorInput').value = d.error;
+  const langSel = document.getElementById('debugLangSelect');
+  if (langSel) langSel.value = d.lang;
+
+  window.showToast(`Loaded "${key}" bug scenario!`, 'info');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  const demo = params.get('demo');
+  if (demo && debugDemos[demo]) {
+    loadDebugDemo(demo);
+  }
+});
+</script>
+{% endblock %}

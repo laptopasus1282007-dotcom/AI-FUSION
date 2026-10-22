@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings &amp; About — CodeSathi AI{% endblock %}
+{% block page_title %}Settings &amp; About{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(107,114,128,0.2);color:#9ca3af;">
+    <i class="bi bi-gear-fill"></i>
+  </div>
+  <div>
+    <h1>Settings &amp; About</h1>
+    <p class="text-muted fs-13 mb-0">Customize your learning preferences, inspect system integrations, and explore CodeSathi AI's architecture.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Learning Preferences -->
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="bi bi-sliders me-2 text-primary"></i>Learning Preferences
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{% url 'core:settings' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-600 fs-13">Default Explanation Language</label>
+            <select name="preferred_language" class="form-select">
+              {% for lang in explanation_languages %}
+              <option value="{{ lang }}" {% if pref_lang == lang %}selected{% endif %}>{{ lang }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text fs-12">CodeSathi can explain programming in English, Hindi, and Marathi.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-600 fs-13">Default Difficulty Level</label>
+            <select name="difficulty" class="form-select">
+              {% for level in difficulty_levels %}
+              <option value="{{ level }}" {% if pref_level == level %}selected{% endif %}>{{ level|title }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text fs-12">Adjust the depth, vocabulary, and analogies used in code breakdowns.</div>
+          </div>
+
+          <div class="mb-4 form-check">
+            <input type="checkbox" name="video_first" value="true" class="form-check-input" id="videoFirstCheck" {% if pref_video_first %}checked{% endif %}>
+            <label class="form-check-label fs-13" for="videoFirstCheck">
+              Prefer video recommendations with explanations by default
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check2-circle me-1"></i> Save Preferences
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Integrations Status -->
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-hdd-network me-2 text-primary"></i>System Integrations Status
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+            <div>
+              <div class="fw-600 fs-13">LLM Provider (Active: <span class="text-uppercase text-primary">{{ provider }}</span>)</div>
+              <div class="fs-12 text-muted">Core language model powering explanations and debugging.</div>
+            </div>
+            <div>
+              {% if provider == "gemini" %}
+                {% if gemini_configured %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Gemini Ready</span>
+                {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Missing Key</span>
+                {% endif %}
+              {% else %}
+                {% if openai_configured %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> OpenAI Ready</span>
+                {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Missing Key</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+            <div>
+              <div class="fw-600 fs-13">Embeddings &amp; Vector Search</div>
+              <div class="fs-12 text-muted">SentenceTransformers (all-MiniLM-L6-v2) + FAISS Index</div>
+            </div>
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Local FAISS Ready</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+            <div>
+              <div class="fw-600 fs-13">Document Extraction</div>
+              <div class="fs-12 text-muted">PyMuPDF (fitz) parser for PDF and text manuals</div>
+            </div>
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> PyMuPDF Ready</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+            <div>
+              <div class="fw-600 fs-13">YouTube Data API v3</div>
+              <div class="fs-12 text-muted">Optional live video search; fallback to curated library</div>
+            </div>
+            <div>
+              {% if youtube_configured %}
+              <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> API Configured</span>
+              {% else %}
+              <span class="badge bg-secondary"><i class="bi bi-info-circle me-1"></i> Curated Library Mode</span>
+              {% endif %}
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Architecture & Philosophy -->
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="bi bi-mortarboard me-2 text-primary"></i>About CodeSathi AI
+      </div>
+      <div class="card-body">
+        <h5 class="fw-bold mb-2">Empowering Beginners to Master Programming</h5>
+        <p class="fs-13 text-muted">
+          CodeSathi AI is built specifically for students and self-learners. Rather than just handing out answers, CodeSathi breaks concepts into intuitive mental models, explains line-by-line mechanics, verifies debugging against real evidence, and reinforces retention through guided problem solving.
+        </p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-sm-6">
+            <div class="p-3 rounded border border-dark bg-dark">
+              <div class="text-primary fw-600 mb-1"><i class="bi bi-search me-1"></i> Evidence-Based</div>
+              <div class="fs-12 text-muted">Every debugging output maps directly to code lines, stack traces, and verified documentation.</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="p-3 rounded border border-dark bg-dark">
+              <div class="text-info fw-600 mb-1"><i class="bi bi-translate me-1"></i> Multi-Lingual</div>
+              <div class="fs-12 text-muted">Native support for explanations in English, Hindi, and Marathi to make programming inclusive.</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="p-3 rounded border border-dark bg-dark">
+              <div class="text-warning fw-600 mb-1"><i class="bi bi-tools me-1"></i> Fix It Yourself</div>
+              <div class="fs-12 text-muted">Progressive hints and guided questions prevent dependency on copy-pasting solutions.</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="p-3 rounded border border-dark bg-dark">
+              <div class="text-success fw-600 mb-1"><i class="bi bi-database-check me-1"></i> RAG Grounding</div>
+              <div class="fs-12 text-muted">Retrieval-Augmented Generation indexes course textbooks to prevent hallucinations.</div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4 border-secondary opacity-25">
+
+        <h6 class="fw-bold fs-13 mb-2">Environment Configuration</h6>
+        <p class="fs-12 text-muted mb-2">
+          To set your API keys or change the LLM provider, update the <code class="text-light">.env</code> file in the project root:
+        </p>
+        <pre class="bg-dark p-3 rounded fs-12 mb-0" style="color:#a5b4fc;"><code>LLM_PROVIDER=gemini       # or openai
+GEMINI_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+YOUTUBE_API_KEY=your_key_here</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

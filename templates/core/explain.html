@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Code Explainer — CodeSathi AI{% endblock %}
+{% block page_title %}Code Explainer{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(124,58,237,0.2);color:#a78bfa;">
+    <i class="bi bi-lightbulb-fill"></i>
+  </div>
+  <div>
+    <h1>Code Explainer</h1>
+    <p class="text-muted fs-13 mb-0">Paste any code and get a clear, beginner-friendly explanation.</p>
+  </div>
+</div>
+
+{% if not llm_available %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  LLM API key not configured. <a href="{% url 'core:settings' %}">Add your API key</a> to enable explanations.
+</div>
+{% endif %}
+
+<!-- Judge Demo Presets Bar -->
+<div class="demo-preset-bar">
+  <span class="fs-12 text-warning fw-bold"><i class="bi bi-award-fill me-1"></i>Judge / Demo Presets:</span>
+  <span class="demo-preset-chip" onclick="loadExplainDemo('loop')"><i class="bi bi-play-fill"></i> 1. Off-By-One Loop</span>
+  <span class="demo-preset-chip" onclick="loadExplainDemo('recursion')"><i class="bi bi-play-fill"></i> 2. Recursive Fibonacci</span>
+  <span class="demo-preset-chip" onclick="loadExplainDemo('marathi')"><i class="bi bi-translate"></i> 3. मराठी Explanation Demo</span>
+  <span class="demo-preset-chip" onclick="loadExplainDemo('js_filter')"><i class="bi bi-play-fill"></i> 4. JavaScript Array Filter</span>
+</div>
+
+<form method="POST" action="{% url 'core:explain_result' %}" data-loading="Generating explanation…" id="explainForm">
+  {% csrf_token %}
+  <div class="row g-4">
+    <!-- Left: Code input -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-code-square me-2 text-purple" style="color:#a78bfa;"></i>Your Code</span>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="fs-12 text-muted d-none d-sm-inline">Language:</span>
+            <select class="form-select form-select-sm" name="language" id="langSelect" style="width:130px;">
+              {% for lang in supported_languages %}
+              <option value="{{ lang }}">{{ lang }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <textarea
+            class="form-control border-0 rounded-0"
+            name="code"
+            id="codeInput"
+            placeholder="Paste your code here, or click one of the Judge Demo presets above…"
+            rows="18"
+            style="border-radius:0 0 12px 12px !important;"
+            required
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Options -->
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-translate me-2"></i>Explanation Language</div>
+        <div class="card-body">
+          {% for lang in explanation_languages %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="explanation_language"
+              id="explLang{{ lang }}" value="{{ lang }}"
+              {% if lang == "English" %}checked{% endif %}>
+            <label class="form-check-label text-white fw-500" for="explLang{{ lang }}">{{ lang }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-info-circle me-2"></i>What You'll Get</div>
+        <div class="card-body fs-13">
+          <ul class="list-unstyled mb-0" style="color:var(--text-secondary);">
+            <li class="mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>Simple code summary</li>
+            <li class="mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>Line-by-line mechanical explanation</li>
+            <li class="mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>Variables &amp; functions breakdown</li>
+            <li class="mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>Potential bugs &amp; off-by-one errors spotted</li>
+            <li class="mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>Corrected code side-by-side</li>
+            <li><i class="bi bi-check-circle-fill me-2 text-success"></i>Beginner takeaways &amp; key concepts</li>
+          </ul>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 btn-lg"
+        data-loading-text="Explaining…"
+        {% if not llm_available %}disabled{% endif %}>
+        <i class="bi bi-lightbulb"></i> Explain This Code
+      </button>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const explainDemos = {
+  loop: {
+    lang: 'Python',
+    explLang: 'English',
+    code: `# Calculate running total with off-by-one boundary\nscores = [85, 92, 78, 90, 88]\ntotal = 0\n\nfor i in range(len(scores)):\n    total += scores[i]\n\naverage = total / len(scores)\nprint("Class Average:", average)`
+  },
+  recursion: {
+    lang: 'Python',
+    explLang: 'English',
+    code: `def fibonacci(n):\n    # Recursive Fibonacci function\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    else:\n        return fibonacci(n - 1) + fibonacci(n - 2)\n\nprint("5th Fibonacci number:", fibonacci(5))`
+  },
+  marathi: {
+    lang: 'Python',
+    explLang: 'Marathi',
+    code: `# Python मधील फंक्शन आणि लूपचे सोपे उदाहरण\ndef calculate_discount(price, discount_percent):\n    final_price = price - (price * discount_percent / 100)\n    return final_price\n\nitems = [500, 1200, 2500]\nfor item in items:\n    discounted = calculate_discount(item, 10)\n    print(f"मूळ किंमत: {item}, सवलतीनंतर: {discounted}")`
+  },
+  js_filter: {
+    lang: 'JavaScript',
+    explLang: 'English',
+    code: `// Filter adult users and map their full names\nconst users = [\n  { name: "Aarav", age: 17 },\n  { name: "Pooja", age: 21 },\n  { name: "Rohan", age: 19 }\n];\n\nconst eligibleVoters = users\n  .filter(user => user.age >= 18)\n  .map(user => user.name);\n\nconsole.log("Eligible voters:", eligibleVoters);`
+  }
+};
+
+function loadExplainDemo(key) {
+  const d = explainDemos[key];
+  if (!d) return;
+  document.getElementById('codeInput').value = d.code;
+  const langSel = document.getElementById('langSelect');
+  if (langSel) langSel.value = d.lang;
+
+  const explRadio = document.getElementById('explLang' + d.explLang);
+  if (explRadio) explRadio.checked = true;
+
+  window.showToast(`Loaded "${key}" demo scenario!`, 'info');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  const demo = params.get('demo');
+  if (demo && explainDemos[demo]) {
+    loadExplainDemo(demo);
+  }
+});
+</script>
+{% endblock %}

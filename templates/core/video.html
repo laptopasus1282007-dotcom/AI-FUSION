@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Video Learning — CodeSathi AI{% endblock %}
+{% block page_title %}AI Video Learning Assistant{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(59,130,246,0.2);color:#60a5fa;">
+    <i class="bi bi-play-circle-fill"></i>
+  </div>
+  <div>
+    <h1>AI Video Learning Assistant</h1>
+    <p class="text-muted fs-13 mb-0">Get simpler explanations, find tutorial videos, and practice with questions.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Search Panel -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-search me-2"></i>Find Learning Resources</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Concept / Topic</label>
+          <input type="text" class="form-control" id="videoConcept"
+            placeholder="e.g. for loop, pointers, recursion…">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Programming Language</label>
+          <select class="form-select" id="videoLang">
+            <option value="">Any</option>
+            {% for lang in supported_languages %}<option>{{ lang }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Difficulty</label>
+          <select class="form-select" id="videoDifficulty">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Explanation Language</label>
+          <select class="form-select" id="videoExplLang">
+            {% for lang in explanation_languages %}<option>{{ lang }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" onclick="searchVideos()">
+            <i class="bi bi-play-circle"></i> Find Videos
+          </button>
+          <button class="btn btn-secondary" onclick="requestSimpler()">
+            <i class="bi bi-chat-dots"></i> Simpler Explanation
+          </button>
+          <button class="btn btn-secondary" onclick="getPractice()">
+            <i class="bi bi-pencil-square"></i> Practice Question
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Common Topics -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-tags me-2"></i>Quick Topics</div>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='for loop'; searchVideos();">for loop</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='while loop'; searchVideos();">while loop</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='arrays'; searchVideos();">arrays</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='pointers'; searchVideos();">pointers</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='functions'; searchVideos();">functions</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='recursion'; searchVideos();">recursion</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='variables'; searchVideos();">variables</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='if-else'; searchVideos();">if-else</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='syntax errors'; searchVideos();">syntax errors</button>
+          <button class="tag-pill border-0 btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('videoConcept').value='Python basics'; searchVideos();">Python basics</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="col-lg-8">
+    <!-- Video Results -->
+    <div id="videoResults">
+      <div class="card text-center py-5">
+        <div class="card-body">
+          <i class="bi bi-play-circle" style="font-size:56px;color:var(--text-muted);"></i>
+          <h4 class="mt-3 fw-700">Search for a concept</h4>
+          <p class="text-muted fs-13">Enter a programming concept and find tutorial videos.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simpler Explanation Result -->
+    <div id="simplerPanel" class="card mt-3 d-none">
+      <div class="card-header" style="color:#22d3ee;"><i class="bi bi-chat-left-text me-2"></i>Simpler Explanation</div>
+      <div class="card-body fs-13" id="simplerContent" style="white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- Practice Result -->
+    <div id="practicePanel" class="card mt-3 d-none">
+      <div class="card-header" style="color:#fbbf24;"><i class="bi bi-pencil me-2"></i>Practice Question</div>
+      <div class="card-body">
+        <p class="fw-600 fs-14" id="practiceQ"></p>
+        <p class="fs-12 text-muted" id="practiceHint"></p>
+        <button class="btn btn-sm btn-secondary" onclick="toggleAnswer()"><i class="bi bi-eye"></i> Show Answer</button>
+        <button class="btn btn-sm btn-secondary ms-2" onclick="getPractice()"><i class="bi bi-arrow-clockwise"></i> Another Question</button>
+        <div id="practiceAnswer" class="mt-3 fs-13 d-none p-3 rounded"
+          style="background:rgba(245,158,11,0.08);border-left:3px solid #fbbf24;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Template tag `split` is not a default Django filter; handled below via JS quick-topic buttons
+
+async function searchVideos() {
+  const concept = document.getElementById('videoConcept').value.trim();
+  if (!concept) { window.showToast('Please enter a concept.', 'warning'); return; }
+
+  const container = document.getElementById('videoResults');
+  container.innerHTML = '<div class="text-center py-5"><div class="loading-spinner mx-auto mb-3"></div><p class="text-muted">Searching for videos…</p></div>';
+
+  try {
+    const data = await window.postJSON("{% url 'core:video_recommend' %}", {
+      concept: concept,
+      language: document.getElementById('videoLang').value,
+      difficulty: document.getElementById('videoDifficulty').value,
+    });
+    container.innerHTML = `<h5 class="fw-700 mb-3">Results for: <span class="text-gradient">${concept}</span></h5>`;
+    window.VideoHelper.renderVideos(data, container);
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> ${e.message}</div>`;
+  }
+}
+
+async function requestSimpler() {
+  const concept = document.getElementById('videoConcept').value.trim();
+  if (!concept) { window.showToast('Please enter a concept first.', 'warning'); return; }
+
+  const panel = document.getElementById('simplerPanel');
+  const content = document.getElementById('simplerContent');
+  panel.classList.remove('d-none');
+  content.textContent = 'Generating simpler explanation…';
+
+  try {
+    const data = await window.postJSON("{% url 'core:explain_simpler' %}", {
+      concept: concept,
+      original_explanation: '',
+      explanation_language: document.getElementById('videoExplLang').value,
+    });
+    content.textContent = data.explanation;
+  } catch(e) { content.textContent = 'Error: ' + e.message; }
+}
+
+async function getPractice() {
+  const concept = document.getElementById('videoConcept').value.trim();
+  if (!concept) { window.showToast('Please enter a concept first.', 'warning'); return; }
+
+  try {
+    const data = await window.postJSON("{% url 'core:practice_question' %}", {
+      concept: concept,
+      language: document.getElementById('videoLang').value || 'Python',
+      difficulty: document.getElementById('videoDifficulty').value,
+      explanation_language: document.getElementById('videoExplLang').value,
+    });
+    document.getElementById('practiceQ').textContent = data.question;
+    document.getElementById('practiceHint').textContent = data.hint ? 'Hint: ' + data.hint : '';
+    document.getElementById('practiceAnswer').textContent = data.answer_explanation;
+    document.getElementById('practiceAnswer').classList.add('d-none');
+    document.getElementById('practicePanel').classList.remove('d-none');
+  } catch(e) { window.showToast(e.message, 'error'); }
+}
+
+function toggleAnswer() {
+  document.getElementById('practiceAnswer').classList.toggle('d-none');
+}
+</script>
+{% endblock %}

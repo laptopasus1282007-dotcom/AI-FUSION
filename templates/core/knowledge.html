@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Knowledge Base — CodeSathi AI{% endblock %}
+{% block page_title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(245,158,11,0.2);color:#fbbf24;">
+    <i class="bi bi-book-fill"></i>
+  </div>
+  <div>
+    <h1>Knowledge Base</h1>
+    <p class="text-muted fs-13 mb-0">Upload PDF or TXT documents. The AI will use them to answer questions with source attribution.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Upload Section -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-cloud-upload me-2" style="color:#fbbf24;"></i>Upload Document</div>
+      <div class="card-body">
+        <form method="POST" action="{% url 'core:knowledge_upload' %}" enctype="multipart/form-data"
+          data-loading="Uploading document…" id="uploadForm">
+          {% csrf_token %}
+          <div class="drop-zone mb-3" id="dropZone" onclick="document.getElementById('docFile').click()">
+            <div class="drop-zone-icon"><i class="bi bi-file-earmark-arrow-up"></i></div>
+            <p class="fw-600 mb-1">Click or drop file here</p>
+            <p class="text-muted fs-12 mb-0">PDF and TXT only · Max 10 MB</p>
+          </div>
+          <input type="file" name="document" id="docFile" accept=".pdf,.txt" class="d-none" onchange="previewFile(this)">
+          <div id="filePreview" class="d-none mb-3 p-3 rounded" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
+            <i class="bi bi-file-earmark me-2" style="color:#fbbf24;"></i>
+            <span id="fileName" class="fs-13 fw-600"></span>
+            <span id="fileSize" class="fs-12 text-muted ms-2"></span>
+          </div>
+          <button type="submit" class="btn btn-primary w-100" id="uploadBtn" disabled
+            data-loading-text="Uploading…">
+            <i class="bi bi-cloud-upload"></i> Upload &amp; Index
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Ask a Question -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-chat-question me-2" style="color:#22d3ee;"></i>Ask the Knowledge Base</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <textarea class="form-control" id="kbQuestion" rows="4"
+            placeholder="Ask a question about your uploaded documents…" style="min-height:auto;"></textarea>
+        </div>
+        <button class="btn btn-primary w-100" onclick="askQuestion()">
+          <i class="bi bi-search"></i> Ask Question
+        </button>
+        <div id="kbAnswer" class="mt-3 d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents List -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-files me-2"></i>Uploaded Documents</span>
+        <span class="badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;">{{ docs|length }} total</span>
+      </div>
+      <div class="card-body p-0">
+        {% if not docs %}
+        <div class="text-center py-5">
+          <i class="bi bi-folder-x" style="font-size:48px;color:var(--text-muted);"></i>
+          <p class="mt-3 text-muted">No documents uploaded yet. Upload a PDF or TXT file to get started.</p>
+        </div>
+        {% else %}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Status</th>
+                <th>Chunks</th>
+                <th>Pages</th>
+                <th>Uploaded</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in docs %}
+              <tr id="docRow{{ doc.id|slugify }}">
+                <td>
+                  <i class="bi bi-file-earmark{% if '.pdf' in doc.filename %}-pdf{% else %}-text{% endif %} me-2" style="color:#fbbf24;"></i>
+                  <span class="fw-600 fs-13">{{ doc.filename }}</span>
+                  <br>
+                  <span class="text-muted fs-12">{{ doc.file_size_bytes|filesizeformat }}</span>
+                </td>
+                <td>
+                  <span class="status-badge {{ doc.status }}" id="status_{{ doc.id }}"
+                    title="{{ doc.error_message }}"
+                    {% if doc.status == 'processing' or doc.status == 'uploaded' %}
+                    data-doc-id="{{ doc.id }}"
+                    data-status-url="{% url 'core:knowledge_status' doc.id %}"
+                    {% endif %}
+                  >
+                    {% if doc.status == 'processing' %}<span class="spinner-sm"></span> {% endif %}
+                    {{ doc.status }}
+                  </span>
+                </td>
+                <td class="fs-13">{{ doc.total_chunks }}</td>
+                <td class="fs-13">{{ doc.total_pages }}</td>
+                <td class="fs-12 text-muted">{{ doc.created_at|date:"M d, Y" }}</td>
+                <td>
+                  <form method="POST" action="{% url 'core:knowledge_delete' doc.id %}"
+                    onsubmit="return confirm('Delete {{ doc.filename }}? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-secondary" style="color:#f87171;">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RAG Info -->
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-info-circle me-2"></i>How RAG Works Here</div>
+      <div class="card-body fs-13" style="color:var(--text-secondary);">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="d-flex gap-2">
+              <div class="step-circle flex-shrink-0" style="width:28px;height:28px;font-size:12px;">1</div>
+              <p class="mb-0">Text is extracted from your PDF/TXT file.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex gap-2">
+              <div class="step-circle flex-shrink-0" style="width:28px;height:28px;font-size:12px;">2</div>
+              <p class="mb-0">Text is split into overlapping chunks.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex gap-2">
+              <div class="step-circle flex-shrink-0" style="width:28px;height:28px;font-size:12px;">3</div>
+              <p class="mb-0">Each chunk is embedded with Sentence Transformers.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex gap-2">
+              <div class="step-circle flex-shrink-0" style="width:28px;height:28px;font-size:12px;">4</div>
+              <p class="mb-0">Embeddings are stored in a FAISS index for similarity search.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Start polling for documents that are still processing
+document.querySelectorAll('.status-badge[data-status-url]').forEach(function(badge) {
+  window.pollDocStatus(badge.dataset.docId, badge.dataset.statusUrl, badge);
+});
+
+// File input preview
+function previewFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const preview = document.getElementById('filePreview');
+  preview.classList.remove('d-none');
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = '(' + (file.size / 1024).toFixed(1) + ' KB)';
+  document.getElementById('dropZone').querySelector('p').textContent = 'File selected ✓';
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+// Drag-and-drop
+const dropZone = document.getElementById('dropZone');
+if (dropZone) {
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('drag-over');
+  });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const input = document.getElementById('docFile');
+    input.files = e.dataTransfer.files;
+    previewFile(input);
+  });
+}
+
+// Ask a question
+async function askQuestion() {
+  const q = document.getElementById('kbQuestion').value.trim();
+  if (!q) { window.showToast('Please enter a question.', 'warning'); return; }
+
+  const answerEl = document.getElementById('kbAnswer');
+  answerEl.classList.remove('d-none');
+  answerEl.innerHTML = '<div class="text-center py-3"><span class="spinner-sm"></span> Searching knowledge base…</div>';
+
+  try {
+    const data = await window.postJSON("{% url 'core:knowledge_ask' %}", { question: q });
+
+    let sourceHtml = '';
+    if (data.source_mode === 'ai_general') {
+      sourceHtml = '<div class="source-badge ai-general mb-2"><i class="bi bi-robot"></i> Generated Using AI General Knowledge — not supported by uploaded documents</div>';
+    } else if (data.source_mode === 'doc_only') {
+      sourceHtml = '<div class="source-badge doc-only mb-2"><i class="bi bi-book-fill"></i> Based on Uploaded Documents</div>';
+    } else if (data.source_mode === 'doc_and_ai') {
+      sourceHtml = '<div class="source-badge doc-and-ai mb-2"><i class="bi bi-stars"></i> Based on Uploaded Documents + AI General Knowledge</div>';
+    }
+
+    if (data.retrieval_error) {
+      sourceHtml = '<div class="source-badge retrieval-error mb-2"><i class="bi bi-exclamation-triangle"></i> ' + data.retrieval_error_message + '</div>';
+    }
+
+    let sourcesHtml = '';
+    if (data.sources && data.sources.length) {
+      sourcesHtml = '<div class="mt-3"><h6 class="fw-700 fs-13">Document Sources:</h6>';
+      data.sources.forEach(s => {
+        sourcesHtml += `<div class="p-2 rounded mb-2" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);">
+          <p class="fs-12 fw-700 mb-1" style="color:#fbbf24;">${s.filename} — Page ${s.page}</p>
+          <p class="fs-12 mb-0 text-muted">${s.excerpt_used || ''}</p>
+        </div>`;
+      });
+      sourcesHtml += '</div>';
+    }
+
+    answerEl.innerHTML = `
+      ${sourceHtml}
+      <div class="p-3 rounded" style="background:var(--bg-input);font-size:13px;white-space:pre-wrap;">${data.answer}</div>
+      ${sourcesHtml}`;
+  } catch(e) {
+    answerEl.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> ${e.message}</div>`;
+  }
+}
+</script>
+{% endblock %}

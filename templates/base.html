@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CodeSathi AI — Your beginner-friendly programming assistant for code explanation, debugging, and learning.">
+  <title>{% block title %}CodeSathi AI{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Highlight.js for code syntax -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+  <!-- Custom CSS -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ====== SIDEBAR NAVIGATION ====== -->
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="bi bi-code-slash"></i>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">CodeSathi</span>
+        <span class="brand-ai">AI</span>
+      </div>
+    </div>
+    <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+      <i class="bi bi-layout-sidebar-reverse"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-section-label">CORE TOOLS</div>
+  <ul class="sidebar-nav">
+    <li class="nav-item">
+      <a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-3x3-gap-fill"></i>
+        <span>Dashboard</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:explain' %}" class="nav-link {% if 'explain' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-lightbulb-fill"></i>
+        <span>Code Explainer</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:debug' %}" class="nav-link {% if 'debug' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bug-fill"></i>
+        <span>Debugging Assistant</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:evidence' %}" class="nav-link {% if request.resolver_match.url_name == 'evidence' %}active{% endif %}">
+        <i class="bi bi-shield-check"></i>
+        <span>Evidence Lab</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:fixit' %}" class="nav-link {% if request.resolver_match.url_name == 'fixit' %}active{% endif %}">
+        <i class="bi bi-tools"></i>
+        <span>Fix It Yourself</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="sidebar-section-label">LEARNING</div>
+  <ul class="sidebar-nav">
+    <li class="nav-item">
+      <a href="{% url 'core:video' %}" class="nav-link {% if 'video' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-play-circle-fill"></i>
+        <span>Video Learning</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:bugdna' %}" class="nav-link {% if 'bugdna' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i>
+        <span>Bug DNA</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:knowledge' %}" class="nav-link {% if 'knowledge' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-book-fill"></i>
+        <span>Knowledge Base</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'core:history' %}" class="nav-link {% if request.resolver_match.url_name == 'history' %}active{% endif %}">
+        <i class="bi bi-clock-history"></i>
+        <span>Learning History</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="sidebar-section-label">SYSTEM</div>
+  <ul class="sidebar-nav">
+    <li class="nav-item">
+      <a href="{% url 'core:settings' %}" class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+        <i class="bi bi-gear-fill"></i>
+        <span>Settings &amp; About</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+
+<!-- ====== MAIN CONTENT ====== -->
+<div id="mainContent" class="main-content">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button id="mobileSidebarToggle" class="btn btn-link mobile-menu-btn" aria-label="Open menu">
+      <i class="bi bi-list fs-4"></i>
+    </button>
+    <div class="topbar-title">{% block page_title %}CodeSathi AI{% endblock %}</div>
+    
+    <div class="topbar-actions d-flex align-items-center gap-2">
+      <!-- Font Accessibility Controls -->
+      <div class="font-controls-group d-none d-sm-inline-flex" title="Adjust text size for comfortable reading">
+        <button type="button" class="font-ctrl-btn" onclick="adjustFontSize(-1)" title="Smaller Text">A-</button>
+        <span class="font-scale-indicator" id="fontScaleDisplay">100%</span>
+        <button type="button" class="font-ctrl-btn" onclick="adjustFontSize(1)" title="Larger Text">A+</button>
+      </div>
+
+      <!-- High Contrast Toggle -->
+      <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center px-2 py-1" onclick="toggleContrast()" id="contrastBtn" title="Toggle high contrast font visibility" style="font-size:12px;border-radius:14px;">
+        <i class="bi bi-circle-half me-1"></i> Contrast
+      </button>
+
+      <!-- Judge Demo Mode Button -->
+      <button type="button" class="judge-demo-btn" data-bs-toggle="modal" data-bs-target="#judgeModal">
+        <i class="bi bi-award-fill"></i> Judge Demo Mode
+      </button>
+
+      {% if not llm_available %}
+      <a href="{% url 'core:settings' %}" class="badge bg-warning text-dark text-decoration-none">
+        <i class="bi bi-exclamation-triangle"></i> API Key Missing
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Messages -->
+  {% if messages %}
+  <div class="messages-container px-4 pt-3">
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Page Content -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<!-- ====== JUDGE DEMO MODE MODAL ====== -->
+<div class="modal fade" id="judgeModal" tabindex="-1" aria-labelledby="judgeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-warning border-opacity-50">
+      <div class="modal-header" style="background:linear-gradient(90deg, rgba(245,158,11,0.15), rgba(124,58,237,0.1));">
+        <div class="d-flex align-items-center gap-2">
+          <div class="p-2 rounded bg-warning text-dark fw-bold">
+            <i class="bi bi-trophy-fill fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0 text-white" id="judgeModalLabel">CodeSathi AI — Judge &amp; Evaluator Showcase</h5>
+            <p class="fs-12 text-muted mb-0">Empowering beginner programmers with Socratic AI mentorship, verifiable debugging, &amp; native Indian languages.</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <!-- Hackathon Value Proposition Strip -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark h-100">
+              <div class="text-primary fw-bold fs-13 mb-1"><i class="bi bi-lightbulb me-1"></i> Socratic Teaching</div>
+              <div class="fs-12 text-muted">Doesn't vomit solutions; walks through line-by-line mechanics &amp; memory models.</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark h-100">
+              <div class="text-warning fw-bold fs-13 mb-1"><i class="bi bi-translate me-1"></i> Vernacular First</div>
+              <div class="fs-12 text-muted">Native explanations in Marathi, Hindi &amp; English for non-English native learners.</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark h-100">
+              <div class="text-info fw-bold fs-13 mb-1"><i class="bi bi-shield-check me-1"></i> Zero Hallucination</div>
+              <div class="fs-12 text-muted">Verifiable Evidence Lab with FAISS RAG grounding from syllabus textbooks.</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark h-100">
+              <div class="text-success fw-bold fs-13 mb-1"><i class="bi bi-graph-up-arrow me-1"></i> Bug DNA</div>
+              <div class="fs-12 text-muted">Tracks real user weakness patterns over time to recommend targeted practice.</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-warning mb-3"><i class="bi bi-lightning-charge-fill me-1"></i> 1-Click Interactive Judge Scenarios (Click to Run):</h6>
+        <div class="row g-3 mb-4">
+          <!-- Scenario 1 -->
+          <div class="col-md-4">
+            <div class="judge-scenario-card" onclick="runJudgeScenario('explain_loop')">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-primary judge-badge-scenario">Code Explainer</span>
+                <i class="bi bi-arrow-right-circle text-warning fs-5"></i>
+              </div>
+              <h6 class="fw-bold text-white mb-1">Scenario 1: Off-By-One Logic Explainer</h6>
+              <p class="fs-12 text-muted mb-3 flex-grow-1">Examines how an off-by-one loop works, breaking it into an intuitive mental model with step-by-step trace.</p>
+              <button class="btn btn-sm btn-outline-warning w-100 py-1">Launch Scenario 1 &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Scenario 2 -->
+          <div class="col-md-4">
+            <div class="judge-scenario-card" onclick="runJudgeScenario('debug_index')">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-danger judge-badge-scenario">Debugging</span>
+                <i class="bi bi-arrow-right-circle text-warning fs-5"></i>
+              </div>
+              <h6 class="fw-bold text-white mb-1">Scenario 2: Root-Cause Debugging</h6>
+              <p class="fs-12 text-muted mb-3 flex-grow-1">Provides IndexError traceback. Demonstrates root cause diagnosis, evidence badge, and side-by-side corrected code.</p>
+              <button class="btn btn-sm btn-outline-danger w-100 py-1">Launch Scenario 2 &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Scenario 3 -->
+          <div class="col-md-4">
+            <div class="judge-scenario-card" onclick="runJudgeScenario('explain_marathi')">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-warning text-dark judge-badge-scenario">मराठी Inclusive</span>
+                <i class="bi bi-arrow-right-circle text-warning fs-5"></i>
+              </div>
+              <h6 class="fw-bold text-white mb-1">Scenario 3: Marathi Native Explanation</h6>
+              <p class="fs-12 text-muted mb-3 flex-grow-1">Explains Python recursion entirely in Marathi so regional rural engineering students understand core concepts easily.</p>
+              <button class="btn btn-sm btn-outline-warning w-100 py-1">मराठी डेमो &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Scenario 4 -->
+          <div class="col-md-6">
+            <div class="judge-scenario-card" onclick="runJudgeScenario('fixit')">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-info text-dark judge-badge-scenario">Fix It Yourself</span>
+                <i class="bi bi-arrow-right-circle text-warning fs-5"></i>
+              </div>
+              <h6 class="fw-bold text-white mb-1">Scenario 4: Socratic Hint Progression (Hint 1 &rarr; 2 &rarr; 3)</h6>
+              <p class="fs-12 text-muted mb-3">Prevents passive copy-pasting. Shows how students receive progressive hints, guided questions, and only reveal solutions if stuck.</p>
+              <button class="btn btn-sm btn-outline-info w-100 py-1">Launch Socratic Mode &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Scenario 5 -->
+          <div class="col-md-6">
+            <div class="judge-scenario-card" onclick="runJudgeScenario('video')">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-success judge-badge-scenario">AI Video &amp; Practice</span>
+                <i class="bi bi-arrow-right-circle text-warning fs-5"></i>
+              </div>
+              <h6 class="fw-bold text-white mb-1">Scenario 5: Verified Video &amp; Practice Generator</h6>
+              <p class="fs-12 text-muted mb-3">Integrates real YouTube tutorials with fallback, dynamic practice question generation, and simpler re-explanation.</p>
+              <button class="btn btn-sm btn-outline-success w-100 py-1">Launch Video Mode &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Why CodeSathi Beats ChatGPT -->
+        <h6 class="fw-bold text-white mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Competitive Differentiation Matrix:</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm align-middle fs-13 mb-0" style="border-color:#334155;">
+            <thead class="table-dark">
+              <tr>
+                <th style="width:25%;">Feature</th>
+                <th style="width:37.5%;" class="text-danger"><i class="bi bi-x-circle me-1"></i> Generic AI (e.g. Raw ChatGPT)</th>
+                <th style="width:37.5%;" class="text-success"><i class="bi bi-check-circle me-1"></i> CodeSathi AI (Educational Assistant)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="fw-600 text-white">Pedagogical Approach</td>
+                <td class="text-muted">Immediately vomits finished code; student copies without learning.</td>
+                <td class="text-white bg-dark"><strong>Socratic Fix-It-Yourself:</strong> Progressive hints 1, 2, 3 + guided thinking questions.</td>
+              </tr>
+              <tr>
+                <td class="fw-600 text-white">Evidence &amp; Verification</td>
+                <td class="text-muted">Often hallucinates line numbers or imaginary API syntax.</td>
+                <td class="text-white bg-dark"><strong>Evidence Lab:</strong> Maps every diagnosis to verifiable stack trace lines &amp; FAISS RAG citations.</td>
+              </tr>
+              <tr>
+                <td class="fw-600 text-white">Vernacular Inclusivity</td>
+                <td class="text-muted">English-centric or awkward machine-translation.</td>
+                <td class="text-white bg-dark"><strong>Native Marathi, Hindi &amp; English:</strong> Tailored for regional and rural engineering students.</td>
+              </tr>
+              <tr>
+                <td class="fw-600 text-white">Student Weakness Profiling</td>
+                <td class="text-muted">Stateless; forgets student errors between chats.</td>
+                <td class="text-white bg-dark"><strong>Bug DNA:</strong> Categorizes recurrent logic/syntax flaws and tracks long-term mastery.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <span class="fs-12 text-muted"><i class="bi bi-cpu me-1"></i> Model: <strong>Gemini 3.8 Flash</strong> + FAISS Embeddings</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close Presentation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar overlay for mobile -->
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- Custom JS -->
+<script src="{% static 'js/main.js' %}"></script>
+
+<!-- Font Accessibility & Judge Demo Handler Scripts -->
+<script>
+// --- Font Scale Manager ---
+const fontScales = ['small', 'normal', 'large', 'xlarge'];
+const fontPercentages = {'small':'90%', 'normal':'100%', 'large':'115%', 'xlarge':'130%'};
+let currentFontIdx = 1; // default 'normal' (100%)
+
+function initFontSettings() {
+  const savedScale = localStorage.getItem('codesathi_font_scale');
+  if (savedScale && fontScales.includes(savedScale)) {
+    currentFontIdx = fontScales.indexOf(savedScale);
+  }
+  applyFontScale();
+
+  const savedContrast = localStorage.getItem('codesathi_high_contrast');
+  if (savedContrast === 'true') {
+    document.body.classList.add('high-contrast');
+  }
+}
+
+function adjustFontSize(delta) {
+  currentFontIdx = Math.max(0, Math.min(fontScales.length - 1, currentFontIdx + delta));
+  const scale = fontScales[currentFontIdx];
+  localStorage.setItem('codesathi_font_scale', scale);
+  applyFontScale();
+}
+
+function applyFontScale() {
+  const scale = fontScales[currentFontIdx];
+  document.documentElement.setAttribute('data-font-size', scale);
+  const display = document.getElementById('fontScaleDisplay');
+  if (display) display.textContent = fontPercentages[scale];
+}
+
+function toggleContrast() {
+  document.body.classList.toggle('high-contrast');
+  const isHigh = document.body.classList.contains('high-contrast');
+  localStorage.setItem('codesathi_high_contrast', isHigh);
+}
+
+// --- Judge Scenario Launcher ---
+function runJudgeScenario(scenario) {
+  const modalEl = document.getElementById('judgeModal');
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  if (modal) modal.hide();
+
+  if (scenario === 'explain_loop') {
+    window.location.href = "{% url 'core:explain' %}?demo=loop";
+  } else if (scenario === 'debug_index') {
+    window.location.href = "{% url 'core:debug' %}?demo=index";
+  } else if (scenario === 'explain_marathi') {
+    window.location.href = "{% url 'core:explain' %}?demo=marathi";
+  } else if (scenario === 'fixit') {
+    window.location.href = "{% url 'core:fixit' %}?demo=1";
+  } else if (scenario === 'video') {
+    window.location.href = "{% url 'core:video' %}?demo=1";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initFontSettings);
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

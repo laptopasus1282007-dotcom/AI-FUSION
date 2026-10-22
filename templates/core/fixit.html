@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fix It Yourself — CodeSathi AI{% endblock %}
+{% block page_title %}Fix It Yourself Mode{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(245,158,11,0.2);color:#fbbf24;">
+    <i class="bi bi-tools"></i>
+  </div>
+  <div>
+    <h1>Fix It Yourself Mode</h1>
+    <p class="text-muted fs-13 mb-0">Learn by solving the bug yourself — hints, guided steps, or reveal the solution.</p>
+  </div>
+</div>
+
+{% if not llm_available %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  LLM API key not configured. <a href="{% url 'core:settings' %}">Add your API key</a> first.
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <!-- Code Input Panel -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="bi bi-code-square me-2" style="color:#fbbf24;"></i>Your Code &amp; Error
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Programming Language</label>
+          <select class="form-select" id="fixitLang">
+            {% for lang in supported_languages %}<option>{{ lang }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Your Code</label>
+          <textarea class="form-control" id="fixitCode" rows="12" placeholder="Paste your code here…"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Error Message <span class="text-muted">(optional)</span></label>
+          <textarea class="form-control" id="fixitError" rows="3"
+            placeholder="Paste error message or traceback…" style="min-height:auto;"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Explanation Language</label>
+          <select class="form-select" id="fixitExplLang">
+            {% for lang in explanation_languages %}<option>{{ lang }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-play-circle me-2" style="color:#34d399;"></i>Choose Your Learning Path</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <button class="btn btn-secondary w-100 h-100 py-3" id="hintBtn" onclick="getHint()"
+              {% if not llm_available %}disabled{% endif %}>
+              <i class="bi bi-lightbulb-fill d-block mb-2" style="font-size:24px;color:#fbbf24;"></i>
+              <strong>Hint Mode</strong>
+              <p class="fs-12 text-muted mt-1 mb-0">Small nudge in the right direction</p>
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-secondary w-100 h-100 py-3" id="guidedBtn" onclick="getGuided()"
+              {% if not llm_available %}disabled{% endif %}>
+              <i class="bi bi-signpost-2-fill d-block mb-2" style="font-size:24px;color:#22d3ee;"></i>
+              <strong>Guided Mode</strong>
+              <p class="fs-12 text-muted mt-1 mb-0">Step-by-step concept guidance</p>
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-secondary w-100 h-100 py-3" id="solutionBtn" onclick="getSolution()"
+              {% if not llm_available %}disabled{% endif %}>
+              <i class="bi bi-eye-fill d-block mb-2" style="font-size:24px;color:#a78bfa;"></i>
+              <strong>Show Solution</strong>
+              <p class="fs-12 text-muted mt-1 mb-0">Reveal the corrected code</p>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="col-lg-5">
+    <div id="fixitResults">
+      <div class="card text-center py-5">
+        <div class="card-body">
+          <i class="bi bi-tools" style="font-size:48px;color:var(--text-muted);"></i>
+          <h5 class="mt-3 fw-600">Pick a learning path</h5>
+          <p class="text-muted fs-13">Enter your code and choose Hint, Guided, or Solution.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Learning Tracker -->
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Session Tracker</div>
+      <div class="card-body">
+        <div class="row g-3 text-center">
+          <div class="col-4">
+            <div class="stat-value fs-4" id="hintCount">0</div>
+            <div class="stat-label">Hints</div>
+          </div>
+          <div class="col-4">
+            <div class="stat-value fs-4" id="stepCount">0</div>
+            <div class="stat-label">Steps</div>
+          </div>
+          <div class="col-4">
+            <div class="stat-value fs-4" id="solutionCount">0</div>
+            <div class="stat-label">Solutions</div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="form-label fs-13">Mark as understood:</label>
+          <button class="btn btn-sm btn-success w-100" onclick="markUnderstood()">
+            <i class="bi bi-hand-thumbs-up"></i> I Understand Now
+          </button>
+          <p class="fs-12 text-muted mt-1 mb-0">This records genuine understanding — only click if you truly get it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let hintCount = 0, stepCount = 0, solutionCount = 0;
+
+function getCode() { return document.getElementById('fixitCode').value.trim(); }
+function getError() { return document.getElementById('fixitError').value.trim(); }
+function getLang() { return document.getElementById('fixitLang').value; }
+function getExplLang() { return document.getElementById('fixitExplLang').value; }
+
+function showResult(html) {
+  document.getElementById('fixitResults').innerHTML = html;
+  document.querySelectorAll('#fixitResults pre code').forEach(b => { if (typeof hljs !== 'undefined') hljs.highlightElement(b); });
+  document.querySelectorAll('#fixitResults .copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const code = btn.closest('.code-block-wrapper')?.querySelector('code');
+      if (code) navigator.clipboard.writeText(code.textContent).then(() => { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); });
+    });
+  });
+}
+
+async function getHint() {
+  if (!getCode()) { window.showToast('Please enter some code first.', 'warning'); return; }
+  const btn = document.getElementById('hintBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span>';
+  try {
+    const data = await window.postJSON("{% url 'core:fixit_hint' %}", {
+      code: getCode(), error_message: getError(), language: getLang(), explanation_language: getExplLang()
+    });
+    hintCount++;
+    document.getElementById('hintCount').textContent = hintCount;
+    showResult(`
+      <div class="card" style="border-color:rgba(245,158,11,0.4);">
+        <div class="card-header" style="color:#fbbf24;"><i class="bi bi-lightbulb-fill me-2"></i>Hint</div>
+        <div class="card-body">
+          <p class="mb-3 fs-14" style="white-space:pre-wrap;">${data.hint}</p>
+          <button class="btn btn-sm btn-secondary" onclick="getHint()"><i class="bi bi-arrow-clockwise"></i> Another Hint</button>
+          <button class="btn btn-sm btn-outline-primary ms-2" onclick="getGuided()"><i class="bi bi-signpost-2"></i> Guide Me</button>
+        </div>
+      </div>`);
+  } catch(e) { window.showToast(e.message, 'error'); }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-lightbulb-fill d-block mb-2" style="font-size:24px;color:#fbbf24;"></i><strong>Hint Mode</strong><p class="fs-12 text-muted mt-1 mb-0">Small nudge in the right direction</p>';
+}
+
+async function getGuided() {
+  if (!getCode()) { window.showToast('Please enter some code first.', 'warning'); return; }
+  const btn = document.getElementById('guidedBtn');
+  btn.disabled = true;
+  try {
+    const data = await window.postJSON("{% url 'core:fixit_guided' %}", {
+      code: getCode(), error_message: getError(), language: getLang(),
+      step: stepCount + 1, explanation_language: getExplLang()
+    });
+    stepCount++;
+    document.getElementById('stepCount').textContent = stepCount;
+    showResult(`
+      <div class="card" style="border-color:rgba(6,182,212,0.4);">
+        <div class="card-header" style="color:#22d3ee;"><i class="bi bi-signpost-2-fill me-2"></i>Step ${data.step_number}</div>
+        <div class="card-body">
+          <p class="mb-3 fs-14" style="white-space:pre-wrap;">${data.step}</p>
+          <button class="btn btn-sm btn-secondary" onclick="getGuided()"><i class="bi bi-arrow-right"></i> Next Step</button>
+          <button class="btn btn-sm btn-outline-primary ms-2" onclick="getSolution()"><i class="bi bi-eye"></i> Show Solution</button>
+        </div>
+      </div>`);
+  } catch(e) { window.showToast(e.message, 'error'); }
+  btn.disabled = false;
+}
+
+async function getSolution() {
+  if (!getCode()) { window.showToast('Please enter some code first.', 'warning'); return; }
+  const btn = document.getElementById('solutionBtn');
+  btn.disabled = true;
+  try {
+    const data = await window.postJSON("{% url 'core:fixit_solution' %}", {
+      code: getCode(), error_message: getError(), language: getLang(), explanation_language: getExplLang()
+    });
+    solutionCount++;
+    document.getElementById('solutionCount').textContent = solutionCount;
+    const codeHtml = data.corrected_code
+      ? `<div class="code-block-wrapper"><button class="copy-btn">Copy</button><pre><code class="${getLang().toLowerCase()}">${escapeHtml(data.corrected_code)}</code></pre></div>`
+      : '';
+    showResult(`
+      <div class="card" style="border-color:rgba(124,58,237,0.4);">
+        <div class="card-header" style="color:#a78bfa;"><i class="bi bi-eye-fill me-2"></i>Solution</div>
+        <div class="card-body">
+          <p class="fw-600 mb-2">What was wrong:</p>
+          <p class="fs-13 text-muted mb-3" style="white-space:pre-wrap;">${data.what_was_wrong}</p>
+          ${codeHtml}
+          <div class="mt-3 p-3 rounded fs-13" style="background:rgba(124,58,237,0.08);border-left:3px solid #a78bfa;">
+            <i class="bi bi-info-circle me-2"></i>${data.explanation}
+          </div>
+          <div class="alert alert-warning mt-3 fs-12">
+            <i class="bi bi-exclamation-triangle"></i>
+            Note: Viewing the solution does not automatically mark this as understood. Click "I Understand Now" only when you genuinely do.
+          </div>
+        </div>
+      </div>`);
+  } catch(e) { window.showToast(e.message, 'error'); }
+  btn.disabled = false;
+}
+
+function markUnderstood() {
+  window.showToast('Great! Understanding confirmed. Keep it up! 🎉', 'success');
+  // In a real session this would call the server to record the event
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

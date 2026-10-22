@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Learning History — CodeSathi AI{% endblock %}
+{% block page_title %}Learning History{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(99,102,241,0.2);color:#818cf8;">
+    <i class="bi bi-clock-history"></i>
+  </div>
+  <div>
+    <h1>Learning History</h1>
+    <p class="text-muted fs-13 mb-0">Review your past explanations, debugging sessions, quiz attempts, and learning milestones.</p>
+  </div>
+  <div class="ms-auto">
+    {% if events %}
+    <form method="POST" action="{% url 'core:history_clear' %}" onsubmit="return confirm('Are you sure you want to clear your entire learning history?');" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-trash3 me-1"></i> Clear History
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if not events %}
+<div class="card p-5 text-center">
+  <div class="mb-3">
+    <i class="bi bi-journal-code text-muted" style="font-size:3.5rem;"></i>
+  </div>
+  <h4 class="fw-bold">No Learning Events Recorded Yet</h4>
+  <p class="text-muted fs-14 mx-auto" style="max-width:480px;">
+    Start exploring with Code Explainer, solve bugs in the Debugging Assistant, or ask questions in the Knowledge Base. Your learning milestones will automatically appear here.
+  </p>
+  <div class="d-flex justify-content-center gap-2 mt-2">
+    <a href="{% url 'core:explain' %}" class="btn btn-primary btn-sm"><i class="bi bi-lightbulb me-1"></i> Explain Code</a>
+    <a href="{% url 'core:debug' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-bug me-1"></i> Debug Error</a>
+  </div>
+</div>
+{% else %}
+<div class="card shadow-sm border-0">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-600"><i class="bi bi-activity me-2 text-primary"></i>Activity Log ({{ events|length }} records)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th style="width: 140px;">Time</th>
+          <th style="width: 170px;">Activity Type</th>
+          <th>Topic / Details</th>
+          <th style="width: 180px;">Context</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td class="fs-12 text-muted text-nowrap">
+            {{ event.timestamp|date:"M d, H:i" }}
+          </td>
+          <td>
+            <span class="badge 
+              {% if 'EXPLAIN' in event.event_type %}bg-primary
+              {% elif 'DEBUG' in event.event_type %}bg-danger
+              {% elif 'FIXIT' in event.event_type %}bg-warning text-dark
+              {% elif 'VIDEO' in event.event_type %}bg-info text-dark
+              {% elif 'KB' in event.event_type %}bg-success
+              {% else %}bg-secondary{% endif %}">
+              {{ event.get_event_type_display }}
+            </span>
+          </td>
+          <td>
+            <div class="fw-500 fs-13 text-truncate" style="max-width: 500px;" title="{{ event.topic }}">
+              {{ event.topic|default:"Activity recorded" }}
+            </div>
+            {% if event.metadata %}
+            <div class="fs-11 text-muted mt-1">
+              {% for k, v in event.metadata.items %}
+                <span class="me-2 badge bg-dark border text-muted"><strong>{{ k }}:</strong> {{ v }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            {% if event.language %}
+            <span class="badge bg-secondary me-1">{{ event.language }}</span>
+            {% endif %}
+            {% if event.difficulty %}
+            <span class="badge bg-dark border text-muted">{{ event.difficulty }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

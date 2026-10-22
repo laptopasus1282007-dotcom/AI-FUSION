@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — CodeSathi AI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<div class="mb-4 p-4 rounded-3" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border:1px solid rgba(124,58,237,0.3);">
+  <div class="d-flex align-items-center gap-3">
+    <div class="brand-icon" style="width:54px;height:54px;font-size:26px;">
+      <i class="bi bi-code-slash"></i>
+    </div>
+    <div>
+      <h1 class="h3 fw-800 mb-1">Welcome to <span class="text-gradient">CodeSathi AI</span></h1>
+      <p class="text-muted mb-0 fs-14">Your beginner-friendly AI programming companion — explain, debug, learn.</p>
+    </div>
+  </div>
+
+  {% if not llm_available %}
+  <div class="mt-3 alert alert-warning d-flex align-items-center gap-2 mb-0">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <span>No LLM API key configured. <a href="{% url 'core:settings' %}">Go to Settings</a> and add your API key to enable AI features.</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="stat-value" data-target="{{ event_count }}">{{ event_count }}</div>
+      <div class="stat-label"><i class="bi bi-lightning-charge"></i> Learning Events</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="stat-value" data-target="{{ doc_count }}">{{ doc_count }}</div>
+      <div class="stat-label"><i class="bi bi-files"></i> Knowledge Documents</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      {% with bug_count=top_bugs|length %}
+      <div class="stat-value" data-target="{{ bug_count }}">{{ bug_count }}</div>
+      {% endwith %}
+      <div class="stat-label"><i class="bi bi-bar-chart"></i> Bug Categories Tracked</div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Grid -->
+<h2 class="fs-14 fw-700 text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">CORE TOOLS</h2>
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:explain' %}" class="feature-card purple">
+      <div class="feature-icon purple"><i class="bi bi-lightbulb-fill"></i></div>
+      <h4>Code Explainer</h4>
+      <p>Paste any code and get a beginner-friendly explanation, line-by-line breakdown, and error spotting.</p>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:debug' %}" class="feature-card cyan">
+      <div class="feature-icon cyan"><i class="bi bi-bug-fill"></i></div>
+      <h4>Debugging Assistant</h4>
+      <p>Submit code and an error message to identify the root cause, understand why it happens, and get a fix.</p>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:evidence' %}" class="feature-card green">
+      <div class="feature-icon green"><i class="bi bi-shield-check"></i></div>
+      <h4>Debugging Evidence Lab</h4>
+      <p>See verifiable evidence and source attribution for every debugging recommendation made by the AI.</p>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:fixit' %}" class="feature-card orange">
+      <div class="feature-icon orange"><i class="bi bi-tools"></i></div>
+      <h4>Fix It Yourself</h4>
+      <p>Interactive guided mode — get hints, step-by-step guidance, or reveal the solution at your own pace.</p>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:video' %}" class="feature-card blue">
+      <div class="feature-icon blue"><i class="bi bi-play-circle-fill"></i></div>
+      <h4>AI Video Learning</h4>
+      <p>Still confused? Get a simpler explanation and find relevant tutorial videos for the concept.</p>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'core:bugdna' %}" class="feature-card red">
+      <div class="feature-icon red"><i class="bi bi-bar-chart-fill"></i></div>
+      <h4>Bug DNA Insights</h4>
+      <p>See your recurring mistake patterns, most common error types, and personalized improvement tips.</p>
+    </a>
+  </div>
+</div>
+
+<!-- Learning Workflow -->
+<h2 class="fs-14 fw-700 text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">LEARNING WORKFLOW</h2>
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      {% for step in "1234567"|make_list %}
+      {% if step == "1" %}<div class="d-flex align-items-center gap-2"><div class="step-circle">1</div><span class="fs-13 fw-600">Submit Code</span></div>
+      {% elif step == "2" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">2</div><span class="fs-13 fw-600">AI Explanation</span></div>
+      {% elif step == "3" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">3</div><span class="fs-13 fw-600">Debug Evidence</span></div>
+      {% elif step == "4" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">4</div><span class="fs-13 fw-600">Simpler Explanation</span></div>
+      {% elif step == "5" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">5</div><span class="fs-13 fw-600">Related Video</span></div>
+      {% elif step == "6" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">6</div><span class="fs-13 fw-600">Practice Question</span></div>
+      {% elif step == "7" %}<i class="bi bi-arrow-right text-muted"></i><div class="d-flex align-items-center gap-2"><div class="step-circle">7</div><span class="fs-13 fw-600">Track Progress</span></div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent Bug Categories -->
+{% if top_bugs %}
+<h2 class="fs-14 fw-700 text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">TOP BUG CATEGORIES</h2>
+<div class="row g-3">
+  {% for bug in top_bugs %}
+  <div class="col-md-4">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-600 fs-14">{{ bug.get_category_display }}</span>
+        <span class="badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;">{{ bug.count }}</span>
+      </div>
+      <div style="height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden;">
+        <div class="bug-bar" data-pct="{% widthratio bug.count top_bugs.0.count 100 %}" style="width:0%;height:100%;"></div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

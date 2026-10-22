@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Explanation Result — CodeSathi AI{% endblock %}
+{% block page_title %}Code Explanation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div class="section-header mb-0">
+    <div class="section-icon" style="background:rgba(124,58,237,0.2);color:#a78bfa;"><i class="bi bi-lightbulb-fill"></i></div>
+    <div>
+      <h1>Explanation Result</h1>
+      <p class="text-muted fs-13 mb-0">{{ language }} · {{ explanation_language }}</p>
+    </div>
+  </div>
+  <a href="{% url 'core:explain' %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Explain Another
+  </a>
+</div>
+
+<!-- Source Mode Badge -->
+{% if source_mode == "doc_only" %}
+<div class="source-badge doc-only mb-3"><i class="bi bi-book-fill"></i> Based on Uploaded Documents</div>
+{% elif source_mode == "doc_and_ai" %}
+<div class="source-badge doc-and-ai mb-3"><i class="bi bi-stars"></i> Based on Uploaded Documents + AI General Knowledge</div>
+{% elif source_mode == "retrieval_error" %}
+<div class="source-badge retrieval-error mb-3"><i class="bi bi-exclamation-triangle"></i> Retrieval Error — Using AI General Knowledge Fallback</div>
+{% else %}
+<div class="source-badge ai-general mb-3"><i class="bi bi-robot"></i> Generated Using AI General Knowledge — not supported by uploaded documents</div>
+{% endif %}
+
+<div class="row g-4">
+  <!-- Main Explanation -->
+  <div class="col-lg-8">
+
+    <!-- Summary -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-card-text me-2" style="color:#a78bfa;"></i>Summary</div>
+      <div class="card-body">
+        <p class="mb-0 fw-500">{{ result.summary }}</p>
+      </div>
+    </div>
+
+    <!-- Explanation -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-chat-text me-2" style="color:#22d3ee;"></i>Simple Explanation</div>
+      <div class="card-body">
+        <p class="mb-0" style="white-space:pre-wrap;">{{ result.explanation }}</p>
+      </div>
+    </div>
+
+    <!-- Line-by-Line -->
+    {% if result.line_by_line %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-list-ol me-2" style="color:#fbbf24;"></i>Line-by-Line Breakdown</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead><tr><th style="width:40%;">Code</th><th>Explanation</th></tr></thead>
+            <tbody>
+              {% for item in result.line_by_line %}
+              <tr>
+                <td><code class="text-mono fs-12">{{ item.line }}</code></td>
+                <td class="fs-13">{{ item.explanation }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Variables & Functions -->
+    {% if result.variables_functions %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-box-seam me-2" style="color:#34d399;"></i>Variables &amp; Functions</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead><tr><th>Name</th><th>Type</th><th>Purpose</th></tr></thead>
+            <tbody>
+              {% for item in result.variables_functions %}
+              <tr>
+                <td><code>{{ item.name }}</code></td>
+                <td><span class="tag-pill">{{ item.type }}</span></td>
+                <td class="fs-13">{{ item.purpose }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Potential Errors -->
+    {% if result.potential_errors %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-exclamation-diamond me-2" style="color:#f87171;"></i>Potential Issues</div>
+      <div class="card-body">
+        {% for err in result.potential_errors %}
+        <div class="d-flex gap-3 mb-3 pb-3" style="{% if not forloop.last %}border-bottom:1px solid var(--border-color);{% endif %}">
+          <div style="color:#f87171;font-size:20px;flex-shrink:0;"><i class="bi bi-bug"></i></div>
+          <div>
+            <p class="fw-600 mb-1 fs-14">{{ err.type }}</p>
+            <p class="text-muted mb-1 fs-13">{{ err.description }}</p>
+            <p class="mb-0 fs-13" style="color:#34d399;"><i class="bi bi-lightbulb"></i> {{ err.suggestion }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Corrected Code -->
+    {% if result.corrected_code %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-patch-check me-2" style="color:#34d399;"></i>Corrected Code</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="code-block-wrapper">
+          <button class="copy-btn">Copy</button>
+          <pre><code class="{{ language|lower }}">{{ result.corrected_code }}</code></pre>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Examples -->
+    {% if result.examples %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-terminal me-2" style="color:#60a5fa;"></i>Beginner Example</div>
+      <div class="card-body">
+        <p style="white-space:pre-wrap;font-size:13px;">{{ result.examples }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Document References -->
+    {% if result.document_references %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-files me-2" style="color:#fbbf24;"></i>Document References Used</div>
+      <div class="card-body">
+        {% for ref in result.document_references %}
+        <div class="mb-2 p-3 rounded" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);">
+          <p class="fs-12 fw-700 mb-1" style="color:#fbbf24;">{{ ref.filename }} — Page {{ ref.page }}</p>
+          <p class="fs-12 mb-0 text-muted">{{ ref.excerpt }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right Sidebar -->
+  <div class="col-lg-4">
+
+    <!-- Original Code -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-code me-2"></i>Your Code</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="code-block-wrapper">
+          <button class="copy-btn">Copy</button>
+          <pre style="max-height:300px;overflow-y:auto;"><code class="{{ language|lower }}">{{ code }}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Points -->
+    {% if result.key_points %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-stars me-2" style="color:#a78bfa;"></i>Key Learning Points</div>
+      <div class="card-body">
+        {% for point in result.key_points %}
+        <div class="d-flex gap-2 mb-2">
+          <i class="bi bi-check-circle-fill mt-1 flex-shrink-0" style="color:#34d399;"></i>
+          <p class="mb-0 fs-13">{{ point }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- I Still Don't Understand -->
+    <div class="card mb-3" style="border-color:rgba(6,182,212,0.3);">
+      <div class="card-header" style="color:#22d3ee;"><i class="bi bi-question-circle-fill me-2"></i>I Still Don't Understand</div>
+      <div class="card-body">
+        <p class="fs-13 text-muted mb-3">Get a simpler explanation or find a tutorial video.</p>
+        <div class="d-grid gap-2">
+          <button class="btn btn-sm btn-outline-primary" id="simplerBtn" onclick="requestSimpler()">
+            <i class="bi bi-chat-dots"></i> Explain More Simply
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="requestVideo()">
+            <i class="bi bi-play-circle"></i> Watch Related Video
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="requestPractice()">
+            <i class="bi bi-pencil-square"></i> Give Me a Practice Question
+          </button>
+          <a href="{% url 'core:fixit' %}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-tools"></i> Back to Fix It Yourself
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simpler explanation result -->
+    <div id="simplerResult" class="card mb-3 d-none">
+      <div class="card-header" style="color:#22d3ee;"><i class="bi bi-chat-left-text me-2"></i>Simpler Explanation</div>
+      <div class="card-body fs-13" id="simplerContent" style="white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- Video result -->
+    <div id="videoResult" class="d-none"></div>
+
+    <!-- Practice result -->
+    <div id="practiceResult" class="card mb-3 d-none">
+      <div class="card-header" style="color:#fbbf24;"><i class="bi bi-pencil me-2"></i>Practice Question</div>
+      <div class="card-body">
+        <p class="fw-600 fs-14" id="practiceQuestion"></p>
+        <p class="fs-12 text-muted" id="practiceHint"></p>
+        <button class="btn btn-sm btn-secondary" onclick="showPracticeAnswer()">Show Answer</button>
+        <div id="practiceAnswer" class="mt-3 fs-13 d-none" style="white-space:pre-wrap;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const language = "{{ language }}";
+const explanationLang = "{{ explanation_language }}";
+const summary = {{ result.summary|default:""|escapejs|safe|default:'""' }};
+const explainText = {{ result.explanation|default:""|escapejs|safe|default:'""' }};
+
+async function requestSimpler() {
+  const btn = document.getElementById('simplerBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Generating…';
+  try {
+    const data = await window.postJSON("{% url 'core:explain_simpler' %}", {
+      concept: summary,
+      original_explanation: explainText,
+      explanation_language: explanationLang,
+    });
+    document.getElementById('simplerContent').textContent = data.explanation;
+    document.getElementById('simplerResult').classList.remove('d-none');
+  } catch (e) {
+    window.showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-chat-dots"></i> Explain More Simply';
+  }
+}
+
+async function requestVideo() {
+  const container = document.getElementById('videoResult');
+  container.classList.remove('d-none');
+  container.innerHTML = '<div class="text-center py-3"><span class="spinner-sm"></span> Finding videos…</div>';
+  try {
+    const data = await window.postJSON("{% url 'core:video_recommend' %}", {
+      concept: summary,
+      language: language,
+      difficulty: 'beginner',
+    });
+    window.VideoHelper.renderVideos(data, container);
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+}
+
+async function requestPractice() {
+  try {
+    const data = await window.postJSON("{% url 'core:practice_question' %}", {
+      concept: summary,
+      language: language,
+      explanation_language: explanationLang,
+      difficulty: 'beginner',
+    });
+    document.getElementById('practiceQuestion').textContent = data.question;
+    document.getElementById('practiceHint').textContent = data.hint ? 'Hint: ' + data.hint : '';
+    document.getElementById('practiceAnswer').textContent = data.answer_explanation;
+    document.getElementById('practiceResult').classList.remove('d-none');
+  } catch (e) {
+    window.showToast(e.message, 'error');
+  }
+}
+
+function showPracticeAnswer() {
+  document.getElementById('practiceAnswer').classList.toggle('d-none');
+}
+</script>
+{% endblock %}

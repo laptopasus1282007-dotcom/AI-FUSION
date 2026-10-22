@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Bug DNA Insights — CodeSathi AI{% endblock %}
+{% block page_title %}Bug DNA Insights{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="section-icon" style="background:rgba(239,68,68,0.2);color:#f87171;">
+    <i class="bi bi-bar-chart-fill"></i>
+  </div>
+  <div>
+    <h1>Bug DNA Insights</h1>
+    <p class="text-muted fs-13 mb-0">Your personalised pattern of programming mistakes — based on real recorded sessions.</p>
+  </div>
+</div>
+
+{% if not categories %}
+<div class="card text-center py-5">
+  <div class="card-body">
+    <i class="bi bi-bar-chart" style="font-size:56px;color:var(--text-muted);"></i>
+    <h4 class="mt-3 fw-700">No Bug Data Yet</h4>
+    <p class="text-muted">Start debugging code and your error patterns will appear here.</p>
+    <a href="{% url 'core:debug' %}" class="btn btn-primary mt-2">
+      <i class="bi bi-bug"></i> Start Debugging
+    </a>
+  </div>
+</div>
+{% else %}
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="stat-value" data-target="{{ total_bugs }}">{{ total_bugs }}</div>
+      <div class="stat-label"><i class="bi bi-bug"></i> Total Bugs Recorded</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="stat-value" data-target="{{ categories|length }}">{{ categories|length }}</div>
+      <div class="stat-label"><i class="bi bi-tags"></i> Error Categories</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="stat-value" data-target="{{ history_count }}">{{ history_count }}</div>
+      <div class="stat-label"><i class="bi bi-clock-history"></i> Debugging Sessions</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bug Categories Chart -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-bar-chart-line me-2" style="color:#f87171;"></i>Error Category Breakdown</div>
+  <div class="card-body">
+    {% for cat in categories %}
+    {% if cat.count > 0 %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between mb-1 flex-wrap gap-1">
+        <span class="fw-600 fs-14">{{ cat.get_category_display }}</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted fs-12">{{ cat.count }} occurrences</span>
+          {% if cat.user_confirmed_count > 0 %}
+          <span class="badge" style="background:rgba(16,185,129,0.2);color:#34d399;">✓ {{ cat.user_confirmed_count }} confirmed</span>
+          {% endif %}
+          <button class="btn btn-sm btn-secondary py-0 px-2" style="font-size:11px;"
+            onclick="confirmCat('{{ cat.category }}', this)">Confirm</button>
+        </div>
+      </div>
+      <div style="height:10px;background:var(--bg-input);border-radius:5px;overflow:hidden;">
+        <div class="bug-bar" data-pct="{% widthratio cat.count categories.0.count 100 %}" style="width:0%;"></div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Top Category Detail -->
+{% if categories %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-stars me-2" style="color:#fbbf24;"></i>Most Frequent: {{ categories.0.get_category_display }}</div>
+      <div class="card-body">
+        <p class="fs-13 text-muted mb-3">
+          You've recorded <strong>{{ categories.0.count }}</strong> issues in this category.
+          Here are some resources to help you improve:
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'core:explain' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-lightbulb"></i> Explain a Concept
+          </a>
+          <a href="{% url 'core:video' %}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-play-circle"></i> Watch Related Video
+          </a>
+          <a href="{% url 'core:fixit' %}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-tools"></i> Practice Fixing
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle me-2"></i>Data Notes</div>
+      <div class="card-body fs-13" style="color:var(--text-secondary);">
+        <p class="mb-2"><i class="bi bi-shield-check me-2" style="color:#34d399;"></i>Only real recorded sessions are shown.</p>
+        <p class="mb-2"><i class="bi bi-graph-up me-2" style="color:#60a5fa;"></i>Improvement is tracked by confirmed sessions.</p>
+        <p class="mb-0"><i class="bi bi-exclamation-circle me-2" style="color:#fbbf24;"></i>AI predictions are not used as ground truth.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function confirmCat(category, btn) {
+  btn.disabled = true;
+  try {
+    await window.postJSON("{% url 'core:bugdna_confirm' %}", { category });
+    btn.textContent = '✓ Done';
+    btn.style.color = '#34d399';
+    window.showToast('Category confirmed and added to your Bug DNA!', 'success');
+  } catch(e) {
+    window.showToast(e.message, 'error');
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}
